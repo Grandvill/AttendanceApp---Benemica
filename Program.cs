@@ -1,6 +1,6 @@
 using AttendanceApp.Data;
-using Microsoft.EntityFrameworkCore;
 using AttendanceApp.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +12,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         builder.Configuration.GetConnectionString(
             "DefaultConnection")));
 
+// menambahkan service Attendance ke dalam container dependency injection
 builder.Services.AddScoped<AttendanceService>();
 
 var app = builder.Build();
