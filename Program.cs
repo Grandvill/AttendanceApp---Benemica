@@ -1,5 +1,6 @@
 using AttendanceApp.Data;
 using Microsoft.EntityFrameworkCore;
+using AttendanceApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString(
             "DefaultConnection")));
+
+builder.Services.AddScoped<AttendanceService>();
 
 var app = builder.Build();
 
