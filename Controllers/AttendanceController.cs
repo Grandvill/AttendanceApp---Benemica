@@ -1,11 +1,13 @@
 using System.Globalization;
 using AttendanceApp.DTOs;
 using AttendanceApp.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace AttendanceApp.Controllers;
 
+[Authorize]
 public class AttendanceController : Controller
 {
     private const int MaxVisibleMessages = 5;
