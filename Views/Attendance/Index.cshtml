@@ -1,0 +1,252 @@
+@model List<AttendanceRowDto>
+@{
+    ViewData["Title"] = "Attendance File";
+
+    var attendanceDate = ViewData["AttendanceDate"] as string
+        ?? DateTime.Today.ToString("yyyy-MM-dd");
+
+    var sourceFileName = ViewData["SourceFileName"] as string;
+
+    var rows = Model ?? new List<AttendanceRowDto>();
+}
+
+<div class="mb-3">
+    <h1 class="mb-1">Attendance File</h1>
+    <p class="text-muted mb-0">
+        Upload an Excel file, edit <strong>Attendance IN</strong> / <strong>Attendance OUT</strong> /
+        <strong>Leave</strong>, then click <strong>Save</strong> to store the data in SQL Server.
+    </p>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        @TempData["Warning"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form asp-controller="Attendance" asp-action="Upload" method="post" enctype="multipart/form-data" class="card shadow-sm mb-3">
+    <div class="card-body">
+        <h5 class="card-title mb-3">1. Upload Excel</h5>
+
+        <div class="row g-2 align-items-end">
+            <div class="col-md-6">
+                <label for="attendance-file" class="form-label">Attendance file (*.xlsx)</label>
+                <input type="file" id="attendance-file" name="file" accept=".xlsx" class="form-control" />
+            </div>
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </div>
+        </div>
+
+        <div class="form-text mt-2">
+            Expected columns: <code>ID</code>, <code>Nama</code>, <code>Date</code> (yyyy-MM-dd),
+            <code>Attendance IN</code> (HH:mm), <code>Attendance OUT</code> (HH:mm), <code>Leave</code> (Yes/No).
+            Columns are matched by header name, so the column order may differ.
+        </div>
+    </div>
+</form>
+
+@* token anti-forgery disisipkan otomatis oleh form tag helper (asp-action + method="post") *@
+<form asp-controller="Attendance" asp-action="Save" method="post" id="attendance-form">
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span class="fw-semibold">
+                2. Attendance Data
+                @if (sourceFileName != null)
+                {
+                    <span class="badge text-bg-info ms-1">from @sourceFileName</span>
+                }
+            </span>
+            <span class="badge text-bg-secondary" id="row-count">@rows.Count row(s)</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0" id="attendance-table">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 9rem;">ID</th>
+                        <th>Nama</th>
+                        <th style="width: 8rem;">Date</th>
+                        <th style="width: 10rem;">Attendance IN</th>
+                        <th style="width: 10rem;">Attendance OUT</th>
+                        <th style="width: 8rem;">Leave</th>
+                        <th style="width: 6rem;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (rows.Count == 0)
+                    {
+                        <tr id="empty-row">
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No attendance data yet. Upload an Excel file, or load the saved data from the database below.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @for (var i = 0; i < rows.Count; i++)
+                        {
+                            <tr>
+                                <td>
+                                    <input type="hidden" name="rows[@i].Id" value="@rows[i].Id" />
+                                    <input type="hidden" name="rows[@i].AttendanceDate" value="@(rows[i].AttendanceDate.ToString("yyyy-MM-dd"))" />
+                                    <input type="text" name="rows[@i].EmployeeId" value="@rows[i].EmployeeId" readonly class="form-control form-control-sm bg-body-secondary" />
+                                </td>
+                                <td>
+                                    <input type="text" name="rows[@i].EmployeeName" value="@rows[i].EmployeeName" readonly class="form-control form-control-sm bg-body-secondary" />
+                                </td>
+                                <td class="text-nowrap">@(rows[i].AttendanceDate.ToString("yyyy-MM-dd"))</td>
+                                <td>
+                                    <input type="time" name="rows[@i].AttendanceIn" value="@rows[i].AttendanceIn" class="form-control form-control-sm" />
+                                </td>
+                                <td>
+                                    <input type="time" name="rows[@i].AttendanceOut" value="@rows[i].AttendanceOut" class="form-control form-control-sm" />
+                                </td>
+                                <td>
+                                    <select name="rows[@i].IsLeave" class="form-select form-select-sm">
+                                        <option value="false" selected="@(!rows[i].IsLeave)">No</option>
+                                        <option value="true" selected="@(rows[i].IsLeave)">Yes</option>
+                                    </select>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger js-remove-row">Remove</button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card-footer d-flex flex-wrap align-items-center gap-2">
+            <button type="submit" class="btn btn-success" disabled="@(rows.Count == 0)">Save</button>
+            <span class="text-muted small">
+                Saving stores the latest value of each ID + Date (existing rows are updated, not duplicated).
+            </span>
+        </div>
+    </div>
+</form>
+
+<details class="card shadow-sm mb-3">
+    <summary class="card-header" style="cursor: pointer;">
+        3. Saved data (load from SQL Server)
+    </summary>
+    <div class="card-body">
+        <form asp-controller="Attendance" asp-action="Index" method="get" class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label for="saved-date" class="form-label">Date</label>
+                <input type="date" id="saved-date" name="date" value="@attendanceDate" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-outline-secondary">Load</button>
+            </div>
+            <div class="col-auto">
+                <a asp-controller="Attendance" asp-action="Index" class="btn btn-outline-secondary">Today</a>
+            </div>
+        </form>
+        <div class="form-text mt-2">
+            Use this to verify that the edited data was stored in the database.
+        </div>
+    </div>
+</details>
+
+@* dipakai oleh javascript saat semua baris dihapus (menggantikan baris kosong yang dirender server) *@
+<template id="empty-row-template">
+    <tr id="empty-row">
+        <td colspan="7" class="text-center text-muted py-4">
+            No attendance data yet. Upload an Excel file, or load the saved data from the database below.
+        </td>
+    </tr>
+</template>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            var form = document.getElementById('attendance-form');
+            var table = document.getElementById('attendance-table');
+
+            if (!form || !table) {
+                return;
+            }
+
+            var tbody = table.querySelector('tbody');
+            var emptyTemplate = document.getElementById('empty-row-template');
+            var rowCountBadge = document.getElementById('row-count');
+            var saveButton = form.querySelector('button[type="submit"]');
+
+            function rows() {
+                return tbody.querySelectorAll('tr:not(#empty-row)');
+            }
+
+            // menomori ulang name="rows[i].X" supaya cocok dengan parameter Save(List<AttendanceRowDto> rows)
+            function reindex() {
+                rows().forEach(function (row, index) {
+                    row.querySelectorAll('[name]').forEach(function (input) {
+                        input.name = input.name.replace(/rows\[\d+\]/, 'rows[' + index + ']');
+                    });
+                });
+            }
+
+            function refresh() {
+                var count = rows().length;
+                var emptyRow = document.getElementById('empty-row');
+
+                if (rowCountBadge) {
+                    rowCountBadge.textContent = count + ' row(s)';
+                }
+
+                if (saveButton) {
+                    saveButton.disabled = count === 0;
+                }
+
+                if (count === 0 && !emptyRow && emptyTemplate) {
+                    tbody.appendChild(emptyTemplate.content.cloneNode(true).querySelector('tr'));
+                }
+                else if (count > 0 && emptyRow) {
+                    emptyRow.remove();
+                }
+            }
+
+            tbody.addEventListener('click', function (event) {
+                var button = event.target.closest('.js-remove-row');
+
+                if (!button) {
+                    return;
+                }
+
+                var row = button.closest('tr');
+
+                if (row) {
+                    row.remove();
+                    reindex();
+                    refresh();
+                }
+            });
+
+            refresh();
+        })();
+    </script>
+}
+
+
