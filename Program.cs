@@ -14,6 +14,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // menambahkan service Attendance ke dalam container dependency injection
 builder.Services.AddScoped<AttendanceService>();
+builder.Services.AddScoped<IExcelAttendanceReader, ExcelAttendanceReader>();
 
 var app = builder.Build();
 
