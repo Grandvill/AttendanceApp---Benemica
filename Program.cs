@@ -1,4 +1,5 @@
 using AttendanceApp.Data;
+using AttendanceApp.Models;
 using AttendanceApp.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -8,41 +9,44 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
-// Rahasia TIDAK disimpan di appsettings.json karena file itu ikut ter-commit ke git.
 // Development : dotnet user-secrets set "Authentication:Google:ClientId" "<nilai>"
 // Production  : environment variable Authentication__Google__ClientId / __ClientSecret
-// Validasi ditaruh di luar lambda AddGoogle supaya aplikasi langsung gagal saat start,
-// bukan baru gagal saat request pertama (lambda AddGoogle dievaluasi secara lazy).
+
+// AccountController.GoogleLogin akan menampilkan pesan bahwa konfigurasinya belum ada.
 var googleSection = builder.Configuration.GetSection("Authentication:Google");
 var googleClientId = googleSection["ClientId"];
 var googleClientSecret = googleSection["ClientSecret"];
 
-if (string.IsNullOrWhiteSpace(googleClientId) || string.IsNullOrWhiteSpace(googleClientSecret))
-{
-    throw new InvalidOperationException(
-        "Konfigurasi 'Authentication:Google' belum lengkap. " +
-        "Set lewat user secrets (dotnet user-secrets set \"Authentication:Google:ClientId\" \"<nilai>\" " +
-        "dan dotnet user-secrets set \"Authentication:Google:ClientSecret\" \"<nilai>\"), " +
-        "atau lewat environment variable Authentication__Google__ClientId / Authentication__Google__ClientSecret.");
-}
+var isGoogleConfigured = !string.IsNullOrWhiteSpace(googleClientId)
+    && !string.IsNullOrWhiteSpace(googleClientSecret);
 
-builder.Services.AddAuthentication(options =>
+// status dihitung sekali di sini supaya controller tidak mengulang aturan yang sama.
+builder.Services.AddSingleton(new GoogleAuthOptions { IsConfigured = isGoogleConfigured });
+
+var authentication = builder.Services
+    .AddAuthentication(options =>
     {
         options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = isGoogleConfigured
+            ? GoogleDefaults.AuthenticationScheme
+            : CookieAuthenticationDefaults.AuthenticationScheme;
     })
     .AddCookie(options =>
     {
         options.LoginPath = "/Account/Login";
         options.AccessDeniedPath = "/Account/AccessDenied";
         options.Cookie.Name = "AttendanceApp.Auth";
-    })
-    .AddGoogle(options =>
+    });
+
+if (isGoogleConfigured)
+{
+    authentication.AddGoogle(options =>
     {
-        options.ClientId = googleClientId;
-        options.ClientSecret = googleClientSecret;
+        options.ClientId = googleClientId!;
+        options.ClientSecret = googleClientSecret!;
         options.CallbackPath = "/signin-google";
     });
+}
 
 builder.Services.AddAuthorization();
 
@@ -55,6 +59,14 @@ builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<IExcelAttendanceReader, ExcelAttendanceReader>();
 
 var app = builder.Build();
+
+if (!isGoogleConfigured)
+{
+    app.Logger.LogWarning(
+        "Konfigurasi 'Authentication:Google' belum diisi. Aplikasi berjalan tanpa Google OAuth; " +
+        "isi lewat 'dotnet user-secrets set \"Authentication:Google:ClientId\" \"<nilai>\"' dan " +
+        "'dotnet user-secrets set \"Authentication:Google:ClientSecret\" \"<nilai>\"', lalu restart aplikasi.");
+}
 
 if (!app.Environment.IsDevelopment())
 {

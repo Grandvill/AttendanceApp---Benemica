@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AttendanceApp.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -8,6 +9,13 @@ namespace AttendanceApp.Controllers;
 
 public class AccountController : Controller
 {
+    private readonly GoogleAuthOptions _googleAuthOptions;
+
+    public AccountController(GoogleAuthOptions googleAuthOptions)
+    {
+        _googleAuthOptions = googleAuthOptions;
+    }
+
     // halaman login hanya menyediakan tombol "Sign in with Google",
     // jadi tidak ada form username/password di sisi view.
     [HttpGet]
@@ -19,6 +27,18 @@ public class AccountController : Controller
     [HttpGet]
     public IActionResult GoogleLogin()
     {
+        if (!_googleAuthOptions.IsConfigured)
+        {
+            // aplikasi tetap bisa jalan tanpa Google OAuth; pesan ini tampil di halaman login
+            // lewat alert @TempData["Error"] yang sudah ada di Views/Account/Login.cshtml.
+            TempData["Error"] =
+                "Login dengan Google belum dikonfigurasi. Isi Authentication:Google:ClientId dan " +
+                "Authentication:Google:ClientSecret (user secrets atau environment variable) " +
+                "lalu restart aplikasi.";
+
+            return RedirectToAction(nameof(Login));
+        }
+
         var redirectUrl = Url.Action(nameof(GoogleResponse), "Account");
         var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
