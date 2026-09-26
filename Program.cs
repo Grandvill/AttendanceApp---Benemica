@@ -8,6 +8,24 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
+// Rahasia TIDAK disimpan di appsettings.json karena file itu ikut ter-commit ke git.
+// Development : dotnet user-secrets set "Authentication:Google:ClientId" "<nilai>"
+// Production  : environment variable Authentication__Google__ClientId / __ClientSecret
+// Validasi ditaruh di luar lambda AddGoogle supaya aplikasi langsung gagal saat start,
+// bukan baru gagal saat request pertama (lambda AddGoogle dievaluasi secara lazy).
+var googleSection = builder.Configuration.GetSection("Authentication:Google");
+var googleClientId = googleSection["ClientId"];
+var googleClientSecret = googleSection["ClientSecret"];
+
+if (string.IsNullOrWhiteSpace(googleClientId) || string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    throw new InvalidOperationException(
+        "Konfigurasi 'Authentication:Google' belum lengkap. " +
+        "Set lewat user secrets (dotnet user-secrets set \"Authentication:Google:ClientId\" \"<nilai>\" " +
+        "dan dotnet user-secrets set \"Authentication:Google:ClientSecret\" \"<nilai>\"), " +
+        "atau lewat environment variable Authentication__Google__ClientId / Authentication__Google__ClientSecret.");
+}
+
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -21,9 +39,8 @@ builder.Services.AddAuthentication(options =>
     })
     .AddGoogle(options =>
     {
-        var section = builder.Configuration.GetSection("Authentication:Google");
-        options.ClientId = section["ClientId"] ?? "";
-        options.ClientSecret = section["ClientSecret"] ?? "";
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
         options.CallbackPath = "/signin-google";
     });
 
