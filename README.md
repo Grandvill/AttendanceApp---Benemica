@@ -22,17 +22,11 @@ Untuk masuk ke aplikasi, pengguna harus **login dengan akun Google**.
 - [Tech stack (teknologi yang dipakai)](#tech-stack-teknologi-yang-dipakai)
 - [Struktur folder](#struktur-folder)
 - [Prasyarat (alat yang harus diinstall dulu)](#prasyarat-alat-yang-harus-diinstall-dulu)
-- [1. Cara install .NET](#1-cara-install-net)
-- [2. Kalau membuat project dari nol](#2-kalau-membuat-project-dari-nol)
-- [3. Kalau menjalankan dari hasil clone GitHub](#3-kalau-menjalankan-dari-hasil-clone-github)
-- [4. Setup database (migration)](#4-setup-database-migration)
-- [5. Setup login Google (OAuth)](#5-setup-login-google-oauth)
-- [6. Cara menjalankan aplikasi](#6-cara-menjalankan-aplikasi)
-- [7. Cara memakai aplikasi](#7-cara-memakai-aplikasi)
-- [8. Format file Excel](#8-format-file-excel)
-- [9. Alur data aplikasi (flow)](#9-alur-data-aplikasi-flow)
-- [10. Kalau ada error (troubleshooting)](#10-kalau-ada-error-troubleshooting)
-- [11. Catatan penting](#11-catatan-penting)
+- [1. Cara membuat project dari nol](#1-cara-membuat-project-dari-nol)
+- [2. Cara menjalankan dari hasil clone GitHub](#2-cara-menjalankan-dari-hasil-clone-github)
+- [3. Setup database (migration)](#3-setup-database-migration)
+- [4. Cara memakai aplikasi](#4-cara-memakai-aplikasi)
+- [5. Alur data aplikasi (flow)](#5-alur-data-aplikasi-flow)
 
 ---
 
@@ -118,59 +112,9 @@ AttendanceApp---Benemica/
 | **Visual Studio Code atau Visual Studio** | Editor/IDE untuk melihat dan mengedit kode | Opsional, tapi sangat membantu.                                                      |
 | **SQL Server Management Studio (SSMS)**   | Melihat isi tabel langsung di database     | Opsional.                                                                            |
 
-Untuk melihat versi yang sudah terinstall, buka terminal (PowerShell) lalu jalankan:
-
-```powershell
-dotnet --version
-dotnet --list-sdks
-git --version
-```
-
-Kalau `dotnet --version` mengeluarkan angka `10.x` (contoh: `10.0.103`), berarti .NET 10 SDK sudah siap.
-
 ---
 
-## 1. Cara install .NET
-
-### Windows
-
-1. Buka halaman resmi: <https://dotnet.microsoft.com/download/dotnet/10.0>
-2. Pilih **SDK** (bukan Runtime) untuk Windows x64, lalu unduh dan jalankan installer-nya (klik _Next/Install_ sampai selesai).
-3. **Tutup dan buka ulang** terminal, lalu cek:
-
-```powershell
-dotnet --version
-```
-
-Kalau belum keluar angka `10.x`, artinya SDK belum terpasang dengan benar — coba restart komputer lalu cek lagi.
-
-### Cara lain (lewat winget, kalau tersedia)
-
-```powershell
-winget install Microsoft.DotNet.SDK.10
-```
-
-### Sekalian percaya-kan sertifikat HTTPS (dipakai saat development)
-
-Aplikasi ini bisa dijalankan dengan dua alamat:
-
-- `http://localhost:5168` (dipakai `dotnet run` tanpa opsi)
-- `https://localhost:7275` (dipakai `dotnet run --launch-profile https`)
-
-Supaya browser tidak menampilkan peringatan "not secure" saat memakai alamat HTTPS:
-
-```powershell
-dotnet dev-certs https --trust
-```
-
-Akan muncul pop-up konfirmasi — klik **Yes**. Ini hanya perlu sekali di tiap komputer.
-
----
-
-## 2. Kalau membuat project dari nol
-
-> Bagian ini hanya untuk yang ingin membangun project dari awal.
-> **Kalau Anda clone dari GitHub, lewati saja bagian ini dan langsung ke [bagian 3](#3-kalau-menjalankan-dari-hasil-clone-github).**
+## 1. Cara membuat project dari nol
 
 ```bash
 // 1. Buat project ASP.NET Core MVC
@@ -201,94 +145,11 @@ dotnet ef migrations add InitialCreate
 dotnet ef database update
 ```
 
-> Di project ini langkah 6 **tidak perlu dijalankan lagi**, karena file migration `InitialCreate` sudah ada di folder `Migrations/`. Lihat penjelasan di [bagian 4](#4-setup-database-migration).
+> Di project ini langkah 6 **tidak perlu dijalankan lagi**, karena file migration `InitialCreate` sudah ada di folder `Migrations/`. Lihat penjelasan di [bagian 3](#3-setup-database-migration).
 
 ---
 
-## 3. Kalau menjalankan dari hasil clone GitHub
-
-Kalau Anda mengambil kode dari GitHub (bukan bikin dari nol), ikuti langkah berurutan di bawah ini.
-
-### Langkah 1 — Clone repository
-
-Buka terminal di folder tempat Anda ingin menyimpan project (contoh: `D:\Project`):
-
-```bash
-git clone https://github.com/Grandvill/AttendanceApp---Benemica.git
-cd AttendanceApp---Benemica
-```
-
-### Langkah 2 — Download semua package
-
-Ini tidak perlu `dotnet add package` satu per satu, karena semua package sudah tercatat di `AttendanceApp.csproj`. Cukup:
-
-```bash
-dotnet restore
-```
-
-### Langkah 3 — Install/update tool EF Core
-
-Alat ini dipakai untuk membuat & mengirim struktur database:
-
-```bash
-// install pertama kali
-dotnet tool install --global dotnet-ef
-
-// kalau sudah pernah install, cukup update
-dotnet tool update --global dotnet-ef
-```
-
-Cek apakah sudah terpasang:
-
-```bash
-dotnet ef --version
-dotnet tool list --global
-```
-
-Kalau perintah `dotnet ef` muncul sebagai `dotnet-ef` versi `10.x`, berarti sudah siap.
-
-> **Kalau muncul pesan `dotnet-ef is not recognized` / `'dotnet-ef' is not recognized`:** tutup lalu buka ulang terminal. Kalau masih sama, tambahkan folder tool .NET ke PATH Windows, biasanya `%USERPROFILE%\.dotnet\tools`.
-
-### Langkah 4 — Periksa connection string database
-
-Buka file `appsettings.json`, lihat bagian ini:
-
-```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=localhost\\SQLEXPRESS;Database=AttendanceDb;Trusted_Connection=True;TrustServerCertificate=True;"
-}
-```
-
-### Langkah 5 — Buat database dan tabel
-
-```bash
-dotnet ef database update
-```
-
-Perintah ini akan membuat database `AttendanceDb` beserta tabel `Attendances` sesuai file migration yang sudah ada.
-
-> **Migration tidak perlu dibuat ulang.** Folder `Migrations/` sudah berisi `20260924132714_InitialCreate`, jadi `dotnet ef migrations add InitialCreate` **tidak dijalankan lagi** untuk project ini.
->
-> Perintah `migrations add` hanya dipakai kalau nanti Anda **mengubah struktur tabel** (misalnya menambah kolom baru) — dan nama migration-nya juga berbeda, contoh: `dotnet ef migrations add TambahKolomShift`.
-
-### Langkah 6 — Isi konfigurasi Google (wajib untuk bisa login)
-
-Lihat [bagian 5](#5-setup-login-google-oauth) untuk langkah lengkapnya. Singkatnya:
-
-```bash
-dotnet user-secrets set "Authentication:Google:ClientId" "ISI_CLIENT_ID_ANDA"
-dotnet user-secrets set "Authentication:Google:ClientSecret" "ISI_CLIENT_SECRET_ANDA"
-```
-
-### Langkah 7 — Jalankan aplikasi
-
-```bash
-dotnet run
-```
-
-Lalu buka alamat yang tertulis di terminal — secara default `http://localhost:5168`. Browser biasanya **terbuka otomatis** karena di `launchSettings.json` diatur `launchBrowser: true`.
-
-### Ringkasan cepat (untuk yang sudah berpengalaman)
+## 2. Cara menjalankan dari hasil clone GitHub
 
 ```bash
 git clone https://github.com/Grandvill/AttendanceApp---Benemica.git
@@ -302,9 +163,17 @@ dotnet user-secrets set "Authentication:Google:ClientSecret" "..."
 dotnet run
 ```
 
+```bash
+// melihat daftar secret yang tersimpan
+dotnet user-secrets list
+
+// menghapus satu secret
+dotnet user-secrets remove "Authentication:Google:ClientSecret"
+```
+
 ---
 
-## 4. Setup database (migration)
+## 3. Setup database (migration)
 
 - `dotnet ef migrations add <Nama>` → **membuat file catatan perubahan** (belum menyentuh database).
 - `dotnet ef database update` → **menjalankan catatan itu ke database** (baru di sini tabel benar-benar dibuat/diubah).
@@ -332,89 +201,7 @@ Server=localhost\SQLEXPRESS;Database=AttendanceDb;User Id=sa;Password=PASSWORD_A
 
 ---
 
-## 5. Setup login Google (OAuth)
-
-Aplikasi ini tidak punya form username/password — satu-satunya cara login adalah lewat akun Google.
-
-### Menyimpan kredensial ke project
-
-Di folder project, jalankan:
-
-```bash
-dotnet user-secrets set "Authentication:Google:ClientId" "ISI_CLIENT_ID_ANDA"
-dotnet user-secrets set "Authentication:Google:ClientSecret" "ISI_CLIENT_SECRET_ANDA"
-```
-
-Kenapa pakai `user-secrets`? Supaya Client Secret **tidak ikut ter-upload ke GitHub**.
-
-Perintah bantu lainnya:
-
-```bash
-// melihat daftar secret yang tersimpan
-dotnet user-secrets list
-
-// menghapus satu secret
-dotnet user-secrets remove "Authentication:Google:ClientSecret"
-```
-
-## 6. Cara menjalankan aplikasi
-
-Pastikan terminal sedang berada di folder project (folder yang berisi `AttendanceApp.csproj`).
-
-### Cara biasa
-
-```bash
-dotnet run
-```
-
-Tunggu sampai muncul tulisan seperti:
-
-```
-Now listening on: http://127.0.0.1:5168
-Application started. Press Ctrl+C to shut down.
-```
-
-Lalu buka `http://localhost:5168` di browser (biasanya browser terbuka otomatis).
-
-### Cara development (otomatis restart saat kode diubah)
-
-```bash
-dotnet watch run
-```
-
-Setiap kali Anda menyimpan perubahan kode, aplikasi otomatis di-build ulang dan browser di-refresh.
-
-### Alamat & port yang dipakai
-
-| Profil               | Alamat                                               | Cara menjalankan                    |
-| -------------------- | ---------------------------------------------------- | ----------------------------------- |
-| `http` (**default**) | `http://localhost:5168`                              | `dotnet run`                        |
-| `https`              | `https://localhost:7275` dan `http://localhost:5168` | `dotnet run --launch-profile https` |
-
-> `dotnet run` tanpa opsi memakai profil **pertama** di `Properties/launchSettings.json`, yaitu profil `http`. Karena itu alamat default aplikasi ini adalah `http://localhost:5168`.
-> Halaman pertama yang terbuka adalah **Login**, karena route default aplikasi diarahkan ke `Account/Login` (lihat `Program.cs`).
-
-### Kalau ingin mengakses dari HP / komputer lain di jaringan yang sama
-
-```bash
-dotnet run --urls "http://0.0.0.0:5168"
-```
-
-Lalu buka `http://IP-KOMPUTER-ANDA:5168` dari perangkat lain. Jangan lupa, redirect URI Google juga perlu ditambah di Google Cloud Console (alamat IP yang sama + `/signin-google`).
-
-### Menghentikan aplikasi
-
-Tekan **Ctrl + C** di terminal.
-
-### Build saja tanpa menjalankan
-
-```bash
-dotnet build
-```
-
----
-
-## 7. Cara memakai aplikasi
+## 4. Cara memakai aplikasi
 
 Berikut alur pemakaian dari sisi pengguna (tanpa perlu paham koding).
 
@@ -425,7 +212,7 @@ Berikut alur pemakaian dari sisi pengguna (tanpa perlu paham koding).
 3. Pilih akun Google Anda → klik **Continue/Allow**.
 4. Kalau berhasil, Anda akan diarahkan ke halaman **Home**.
 
-Kalau tombol hanya menampilkan pesan _"Login dengan Google belum dikonfigurasi..."_, berarti langkah di [bagian 5](#5-setup-login-google-oauth) belum dijalankan.
+Kalau tombol hanya menampilkan pesan _"Login dengan Google belum dikonfigurasi..."_, berarti langkah di [bagian 2](#2-cara-menjalankan-dari-hasil-clone-github) belum dijalankan.
 
 ### Langkah 2 — Buka menu Attendance File
 
@@ -476,68 +263,7 @@ Di panel **3. Saved data (load from SQL Server)** (bagian bawah halaman — klik
 
 ---
 
-## 8. Format file Excel
-
-File harus berformat **`.xlsx`** (Excel 2007 ke atas). File `.xls` (Excel lama) dan `.csv` **tidak** didukung.
-
-### Aturan umum
-
-- Hanya **sheet pertama** yang dibaca.
-- **Baris pertama yang terisi** dianggap sebagai baris judul (header).
-- Kolom dicari berdasarkan **nama judul**, bukan posisi. Jadi urutan kolom bebas.
-- Judul kolom tidak peka huruf besar/kecil, spasi, dan tanda baca. Contoh: `Attendance IN`, `attendance in`, dan `AttendanceIn` dianggap sama.
-- Baris kosong otomatis dilewati.
-- Baris yang datanya salah **tidak membatalkan seluruh file** — baris itu dilewati dan pesannya ditampilkan di halaman, misalnya: `Row 7: Employee name is empty.`
-
-### Kolom yang tersedia
-
-| Kolom              | Wajib?       | Isi                                        | Contoh                |
-| ------------------ | ------------ | ------------------------------------------ | --------------------- |
-| **ID**             | **Wajib**    | ID karyawan. Boleh berupa teks atau angka. | `EMP001` atau `10001` |
-| **Nama**           | **Wajib**    | Nama karyawan.                             | `Budi Santoso`        |
-| **Date**           | **Wajib**    | Tanggal absensi.                           | `2026-09-24`          |
-| **Attendance IN**  | Boleh kosong | Jam masuk.                                 | `08:30`               |
-| **Attendance OUT** | Boleh kosong | Jam keluar.                                | `17:00`               |
-| **Leave**          | Boleh kosong | Status cuti/izin.                          | `No` atau `Yes`       |
-
-### Judul kolom yang juga diterima (alias)
-
-Aplikasi mengenali beberapa penulisan judul berikut, jadi Anda tidak wajib menulis persis sama:
-
-| Kolom          | Judul yang diterima                                                    |
-| -------------- | ---------------------------------------------------------------------- |
-| ID             | `ID`, `EmployeeId`, `Employee`, `EmployeeCode`, `NIK`                  |
-| Nama           | `Nama`, `Name`, `EmployeeName`, `NamaKaryawan`                         |
-| Date           | `Date`, `Tanggal`, `AttendanceDate`                                    |
-| Attendance IN  | `AttendanceIn`, `In`, `TimeIn`, `CheckIn`, `ClockIn`, `JamMasuk`       |
-| Attendance OUT | `AttendanceOut`, `Out`, `TimeOut`, `CheckOut`, `ClockOut`, `JamKeluar` |
-| Leave          | `Leave`, `IsLeave`, `Cuti`, `Izin`                                     |
-
-### Format tanggal & jam yang diterima
-
-| Data                    | Format yang diterima                                                                                                                                                       |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Date**                | Bisa berupa sel bertipe tanggal asli Excel, atau teks: `yyyy-MM-dd` (disarankan), `yyyy/MM/dd`, `dd/MM/yyyy`, `dd-MM-yyyy`. Contoh: `2026-09-24`.                          |
-| **Attendance IN / OUT** | Sel bertipe jam dari Excel, atau teks: `08:30`, `8:30`, `08:30:00`. Angka pecahan dari Excel (misalnya `0.3368`) juga dibaca sebagai jam dan dibulatkan ke menit terdekat. |
-| **Leave**               | Sel centang (TRUE/FALSE), atau teks: `Yes`, `Y`, `True`, `1`, `Leave`, `Cuti`, `Izin` dianggap **Yes**; `No`, `N`, `False`, `0`, `-` dianggap **No**.                      |
-
-### Contoh tabel Excel
-
-| ID     | Nama         | Date       | Attendance IN | Attendance OUT | Leave |
-| ------ | ------------ | ---------- | ------------- | -------------- | ----- |
-| EMP001 | Budi Santoso | 2026-09-24 | 08:30         | 17:00          | No    |
-| EMP002 | Siti Aminah  | 2026-09-24 | 08:15         | 16:45          | No    |
-| EMP003 | Andi Wijaya  | 2026-09-24 |               |                | Yes   |
-
-### Yang terjadi setelah upload
-
-1. Isi file ditampilkan di tabel halaman **Attendance File**.
-2. **Belum tersimpan di database** pada tahap ini — masih bisa Anda edit dulu.
-3. Klik **Save** untuk menyimpan ke SQL Server.
-
----
-
-## 9. Alur data aplikasi (flow)
+## 5. Alur data aplikasi (flow)
 
 ### A. Alur upload Excel (dari file sampai tampil di layar)
 
@@ -623,5 +349,3 @@ Penjelasan per lapisan:
 | **Service**    | Berisi aturan bisnis: membaca Excel, menyimpan/mengambil absensi.                      | `Services/*.cs`                |
 | **DbContext**  | Menerjemahkan objek C# menjadi perintah SQL (lewat EF Core).                           | `Data/ApplicationDBContext.cs` |
 | **SQL Server** | Menyimpan data secara permanen.                                                        | tabel `Attendances`            |
-
----
