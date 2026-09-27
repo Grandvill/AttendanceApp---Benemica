@@ -7,11 +7,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AttendanceApp.Controllers;
 
+// mengatur proses pengelolaan data absensi
 [Authorize]
 public class AttendanceController : Controller
 {
     private const int MaxVisibleMessages = 5;
 
+    // Controller menerima dua dependency melalui constructor
     private readonly AttendanceService _attendanceService;
     private readonly IExcelAttendanceReader _excelAttendanceReader;
 
@@ -23,7 +25,7 @@ public class AttendanceController : Controller
         _excelAttendanceReader = excelAttendanceReader;
     }
 
-    // halaman utama "Attendance File": menampilkan data yang sudah tersimpan di database
+    // halaman utama "Attendance File": menampilkan data absensi
     [HttpGet]
     public async Task<IActionResult> Index(
         string? date)
@@ -46,6 +48,7 @@ public class AttendanceController : Controller
     public async Task<IActionResult> Upload(
         IFormFile? file)
     {
+        // Memeriksa file kosong
         if (file == null || file.Length == 0)
         {
             TempData["Error"] =
@@ -54,6 +57,7 @@ public class AttendanceController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        // Memeriksa ekstensi file
         if (!string.Equals(
                 Path.GetExtension(file.FileName),
                 ".xlsx",
@@ -69,7 +73,7 @@ public class AttendanceController : Controller
 
         try
         {
-            // dibaca ke memory dulu supaya stream request tidak dipakai saat parsing
+            // Menyalin file ke MemoryStream lalu memanggil _excelAttendanceReader.Read() untuk parsing data absensi
             using var stream = new MemoryStream();
 
             await file.CopyToAsync(stream, HttpContext.RequestAborted);
@@ -82,6 +86,7 @@ public class AttendanceController : Controller
         {
             throw;
         }
+        // error handler
         catch (Exception ex)
         {
             TempData["Error"] =
@@ -90,6 +95,7 @@ public class AttendanceController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        // cek hasil parsing
         if (result.Rows.Count == 0)
         {
             TempData["Error"] = result.Errors.Count == 0
@@ -108,6 +114,7 @@ public class AttendanceController : Controller
                 $"{result.Errors.Count} row(s) were skipped. {FormatMessages(result.Errors)}";
         }
 
+        // Mengirim hasil parsing ke grid
         ViewData["AttendanceDate"] =
             result.Rows[0].AttendanceDate.ToString("yyyy-MM-dd");
 
@@ -123,6 +130,7 @@ public class AttendanceController : Controller
     public async Task<IActionResult> Save(
         [FromForm] List<AttendanceRowDto> rows)
     {
+        // Memeriksa data kosong
         if (rows == null || rows.Count == 0)
         {
             TempData["Error"] =
@@ -135,6 +143,7 @@ public class AttendanceController : Controller
             ? DateTime.Today
             : rows[0].AttendanceDate.Date;
 
+        // validasi model state (misal: AttendanceIn > AttendanceOut, EmployeeId kosong, dll)
         if (!ModelState.IsValid)
         {
             TempData["Error"] = BuildModelStateMessage();
@@ -142,6 +151,7 @@ public class AttendanceController : Controller
             return RedirectToIndex(attendanceDate);
         }
 
+        // menyimpan hasil editing grid ke SQL Server melalui AttendanceService
         try
         {
             await _attendanceService.SaveAsync(
@@ -170,6 +180,7 @@ public class AttendanceController : Controller
         return RedirectToIndex(attendanceDate);
     }
 
+    // redirect ke index
     private IActionResult RedirectToIndex(
         DateTime attendanceDate)
     {
@@ -178,6 +189,7 @@ public class AttendanceController : Controller
             new { date = attendanceDate.ToString("yyyy-MM-dd") });
     }
 
+    // mengumpulkan pesan validasi dari ModelState (misal: rows[0].EmployeeId: Employee ID is required, rows[1].EmployeeName: Employee name is required.) untuk ditampilkan di TempData["Error"]
     private string BuildModelStateMessage()
     {
         var messages = ModelState
@@ -193,7 +205,8 @@ public class AttendanceController : Controller
             ? "Some rows are invalid. Please check the submitted values."
             : $"Some rows are invalid -> {FormatMessages(messages)}";
     }
-
+    
+    // membatasi jumlah pesan yang ditampilkan menjadi lima (MaxVisibleMessages = 5)
     private static string FormatMessages(
         IReadOnlyList<string> messages)
     {

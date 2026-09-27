@@ -55,12 +55,6 @@
                 <button type="submit" class="btn btn-primary">Upload</button>
             </div>
         </div>
-
-        <div class="form-text mt-2">
-            Expected columns: <code>ID</code>, <code>Nama</code>, <code>Date</code> (yyyy-MM-dd),
-            <code>Attendance IN</code> (HH:mm), <code>Attendance OUT</code> (HH:mm), <code>Leave</code> (Yes/No).
-            Columns are matched by header name, so the column order may differ.
-        </div>
     </div>
 </form>
 
@@ -139,9 +133,6 @@
 
         <div class="card-footer d-flex flex-wrap align-items-center gap-2">
             <button type="submit" class="btn btn-success" disabled="@(rows.Count == 0)">Save</button>
-            <span class="text-muted small">
-                Saving stores the latest value of each ID + Date (existing rows are updated, not duplicated).
-            </span>
         </div>
     </div>
 </form>

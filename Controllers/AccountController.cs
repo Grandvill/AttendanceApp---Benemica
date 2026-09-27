@@ -9,6 +9,7 @@ namespace AttendanceApp.Controllers;
 
 public class AccountController : Controller
 {
+    // mengecek apakah GoogleAuthOptions diisi di Program.cs
     private readonly GoogleAuthOptions _googleAuthOptions;
 
     public AccountController(GoogleAuthOptions googleAuthOptions)
@@ -16,8 +17,7 @@ public class AccountController : Controller
         _googleAuthOptions = googleAuthOptions;
     }
 
-    // halaman login hanya menyediakan tombol "Sign in with Google",
-    // jadi tidak ada form username/password di sisi view.
+    // menampilkan halaman login
     [HttpGet]
     public IActionResult Login()
     {
@@ -29,8 +29,6 @@ public class AccountController : Controller
     {
         if (!_googleAuthOptions.IsConfigured)
         {
-            // aplikasi tetap bisa jalan tanpa Google OAuth; pesan ini tampil di halaman login
-            // lewat alert @TempData["Error"] yang sudah ada di Views/Account/Login.cshtml.
             TempData["Error"] =
                 "Login dengan Google belum dikonfigurasi. Isi Authentication:Google:ClientId dan " +
                 "Authentication:Google:ClientSecret (user secrets atau environment variable) " +
@@ -47,14 +45,16 @@ public class AccountController : Controller
     [HttpGet]
     public async Task<IActionResult> GoogleResponse()
     {
+        // Mengecek apakah sudah memiliki cookie login
         var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
+        // Jika belum ada cookie, periksa hasil autentikasi Google
         if (result?.Principal == null)
         {
             var authenticateResult = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
             if (!authenticateResult.Succeeded || authenticateResult.Principal == null)
             {
-                // pesan ditampilkan di halaman login (tidak ada form username/password).
+                // pesan ditampilkan di halaman login
                 TempData["Error"] = "Login dengan Google gagal. Silakan coba lagi.";
                 return RedirectToAction(nameof(Login));
             }
@@ -72,6 +72,7 @@ public class AccountController : Controller
         return RedirectToAction("Index", "Home");
     }
 
+    // menghapus autentikasi cookie aplikasi
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

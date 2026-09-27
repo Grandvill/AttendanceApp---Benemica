@@ -28,6 +28,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
         @"hh\:mm", @"h\:mm", @"hh\:mm\:ss"
     };
 
+    // HeaderAliases: mengenali nama kolom yang berbeda
     private static readonly Dictionary<string, string[]> HeaderAliases =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -39,6 +40,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
             [ColumnLeave] = new[] { "leave", "isleave", "cuti", "izin" }
         };
 
+    // Read: membaca file Excel dan mengembalikan daftar AttendanceRowDto
     public ExcelAttendanceResult Read(Stream stream)
     {
         var result = new ExcelAttendanceResult();
@@ -89,6 +91,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
             return result;
         }
 
+        // Membaca setiap baris data
         for (var rowNumber = headerRowNumber + 1; rowNumber <= lastRowNumber; rowNumber++)
         {
             var row = worksheet.Row(rowNumber);
@@ -104,6 +107,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
         return result;
     }
 
+    // ReadRow: validasi satu baris dan menambahkan ke result.Rows atau result.Errors
     private static void ReadRow(
         IXLWorksheet worksheet,
         int rowNumber,
@@ -161,6 +165,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
             return;
         }
 
+        // jika tidak ada kesalahan, tambahkan ke daftar result.Rows
         result.Rows.Add(new AttendanceRowDto
         {
             EmployeeId = employeeId!.Trim(),
@@ -172,6 +177,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
         });
     }
 
+    // ResolveColumns: menentukan kolom mana yang digunakan untuk ID, Name, Date, In, Out, Leave berdasarkan header
     private static Dictionary<string, int> ResolveColumns(IXLRow headerRow)
     {
         var columns = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -196,6 +202,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
         return columns;
     }
 
+    // membandingkan header yang sudah dinormalisasi dengan semua alias yang terdaftar dalam HeaderAliases jika tidak maka null
     private static string? ResolveColumnKey(string header)
     {
         foreach (var pair in HeaderAliases)
@@ -209,6 +216,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
         return null;
     }
 
+    // NormalizeHeader: menghapus karakter non-alfanumerik dan mengubah menjadi lowercase
     private static string NormalizeHeader(string header)
     {
         return new string(header
@@ -217,6 +225,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
             .ToArray());
     }
 
+    // mengembalikan jam dalam format "HH:mm"
     private static IXLCell? GetCell(
         IXLWorksheet worksheet,
         int rowNumber,
@@ -228,8 +237,10 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
             : null;
     }
 
+    // ReadText: membaca ID dan nama dari sel Excel
     private static string? ReadText(IXLCell? cell)
     {
+        // sel Excel bisa kosong maka null
         if (cell == null || cell.IsEmpty())
         {
             return null;
@@ -244,6 +255,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
         return cell.GetString().Trim();
     }
 
+    // ReadDate: membaca tanggal dari sel Excel
     private static (DateTime? Date, string? Error) ReadDate(IXLCell? cell)
     {
         if (cell == null || cell.IsEmpty())
@@ -277,7 +289,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
         return (null, $"Date '{text}' is not a valid date (expected yyyy-MM-dd).");
     }
 
-    // mengembalikan jam dalam format "HH:mm"
+    // membaca jam masuk dan keluar
     private static (string? Text, string? Error) ReadTimeText(IXLCell? cell)
     {
         if (cell == null || cell.IsEmpty())
@@ -315,6 +327,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
         return (null, $"Time '{text}' is not a valid time (expected HH:mm).");
     }
 
+    // membaca status cuti
     private static (bool IsLeave, string? Error) ReadLeave(IXLCell? cell)
     {
         if (cell == null || cell.IsEmpty())
@@ -363,6 +376,7 @@ public class ExcelAttendanceReader : IExcelAttendanceReader
         return rounded.ToString(@"hh\:mm", CultureInfo.InvariantCulture);
     }
 
+    // mengubah key kolom menjadi label kolom
     private static string ToHeaderLabel(string columnKey)
     {
         return columnKey switch

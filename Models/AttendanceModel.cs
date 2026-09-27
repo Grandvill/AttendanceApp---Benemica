@@ -1,5 +1,7 @@
 namespace AttendanceApp.Models;
 
+
+//Entity yang merepresentasikan data absensi di database.
 public class Attendance
 {
     public long Id { get; set; }

@@ -16,21 +16,24 @@ public class AttendanceService
         _context = context;
     }
 
-    // mengambil daftar attendance pada satu tanggal untuk ditampilkan di halaman Index
+    // get data absensi berdasarkan tgl
     public async Task<List<AttendanceRowDto>> GetByDateAsync(
         DateTime date,
         CancellationToken cancellationToken = default)
     {
+        // rentang tgl
         var startDate = date.Date;
         var endDate = startDate.AddDays(1);
 
+        // mengakses kumpulan data absensi di tabel database
         var attendances = await _context.Attendances
             .AsNoTracking()
             .Where(x => x.AttendanceDate >= startDate
                 && x.AttendanceDate < endDate)
             .OrderBy(x => x.EmployeeId)
             .ToListAsync(cancellationToken);
-
+        
+        // Mengubah Entity menjadi DTO
         return attendances
             .Select(x => new AttendanceRowDto
             {
@@ -45,10 +48,12 @@ public class AttendanceService
             .ToList();
     }
 
+    //membersihkan dan menggabungkan data duplikat, mengambil record yang sudah ada, lalu melakukan insert atau update sebelum menyimpan perubahan
     public async Task SaveAsync(
         List<AttendanceRowDto> rows,
         CancellationToken cancellationToken = default)
     {
+        // Memeriksa data kosong
         if (rows == null || rows.Count == 0)
         {
             return;
@@ -67,6 +72,7 @@ public class AttendanceService
             return;
         }
 
+        // Menentukan rentang tanggal dan daftar karyawan
         var startDate = normalizedRows.Min(row => row.AttendanceDate.Date);
         var endDate = normalizedRows.Max(row => row.AttendanceDate.Date).AddDays(1);
 
@@ -75,7 +81,7 @@ public class AttendanceService
             .Distinct()
             .ToList();
 
-        // satu query untuk semua baris, bukan satu query per baris (menghindari N+1)
+        // mencari absensi yg sudah disimpan di database untuk karyawan dan tanggal yang sama
         var existingAttendances = await _context.Attendances
             .Where(x => employeeIds.Contains(x.EmployeeId)
                 && x.AttendanceDate >= startDate
@@ -84,6 +90,7 @@ public class AttendanceService
 
         var now = DateTime.UtcNow;
 
+        // Insert atau update
         foreach (var row in normalizedRows)
         {
             var attendanceDate = row.AttendanceDate.Date;
@@ -92,6 +99,7 @@ public class AttendanceService
                 x => x.EmployeeId == row.EmployeeId
                     && x.AttendanceDate.Date == attendanceDate);
 
+            // kalau belum ada: Insert
             if (attendance == null)
             {
                 attendance = new Attendance
@@ -110,6 +118,7 @@ public class AttendanceService
                 // supaya baris berikutnya dengan kunci yang sama ikut di-update, bukan di-insert lagi
                 existingAttendances.Add(attendance);
             }
+            // kalau sudah ada: Update
             else
             {
                 attendance.AttendanceIn =
@@ -129,9 +138,8 @@ public class AttendanceService
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    // mengubah nilai waktu dari form ("08:30" atau "08:30:00") menjadi TimeSpan.
-    // nilai kosong dianggap null, nilai tidak valid dilempar sebagai FormatException
-    // supaya data tidak tersimpan diam-diam salah
+    // mengubah input waktu dari form yang berbentuk string menjadi TimeSpan
+    // contoh : "08:30" menjadi TimeSpan 08:30:00
     private static TimeSpan? ParseTime(
         string? value,
         string fieldName)
@@ -160,6 +168,8 @@ public class AttendanceService
             $"Nilai {fieldName} '{value}' bukan format waktu yang valid (contoh: 08:30).");
     }
 
+    // mengubah waktu dari database menjadi string untuk ditampilkan di UI
+    // contoh: TimeSpan 08:30:00 menjadi "08:30"
     private static string? ToTimeText(TimeSpan? value)
     {
         return value?.ToString(@"hh\:mm");

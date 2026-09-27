@@ -1,10 +1,8 @@
 namespace AttendanceApp.Models;
 
-/// <summary>
-/// Status konfigurasi Google OAuth, dihitung sekali saat startup di Program.cs.
-/// Dipakai supaya tombol "Sign in with Google" bisa menampilkan pesan yang jelas
-/// saat ClientId/ClientSecret belum diisi, tanpa membuat aplikasi gagal start.
-/// </summary>
+// class untuk menyimpan status konfigurasi autentikasi Google
+// Nilainya dihitung satu kali saat aplikasi dijalankan di Program.cs
+//digunakan agar AccountController apakah Google Login dapat digunakan tanpa harus membaca ulang konfigurasi
 public class GoogleAuthOptions
 {
     public bool IsConfigured { get; init; }

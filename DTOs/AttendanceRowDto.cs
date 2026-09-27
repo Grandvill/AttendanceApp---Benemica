@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AttendanceApp.DTOs;
 
+// objek yang membawa data absensi untuk kebutuhan UI dan validasi.
 public class AttendanceRowDto
 {
     public long Id { get; set; }

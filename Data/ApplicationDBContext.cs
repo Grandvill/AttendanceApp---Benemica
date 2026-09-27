@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AttendanceApp.Data;
 
+// penghubung antara aplikasi .NET dengan database SQL Server
+
+// mengelola koneksi dan interaksi aplikasi dengan database (EF Core)
 public class ApplicationDbContext : DbContext
 {
     public ApplicationDbContext(
@@ -13,6 +16,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Attendance> Attendances => Set<Attendance>();
 
+    //mengatur struktur tabel
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {
